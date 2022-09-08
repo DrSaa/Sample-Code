@@ -1,0 +1,62 @@
+def triangulate(pts2L,camL,pts2R,camR):
+    """
+    This is a sample function pulled out from my class assignmnet (CS117, a computer vision calss)
+    It is written in Python, used as sample to demonstrate skill in this Object-oriented language 
+    What this function does: triangulate a set of points seen at location pts2L / pts2R in the
+    corresponding pair of cameras. Return the 3D coordinates relative
+    to the global coordinate system
+
+
+    Parameters
+    ----------
+    pts2L : 2D numpy.array (dtype=float)
+        Coordinates of N points stored in a array of shape (2,N) seen from camL camera
+
+    pts2R : 2D numpy.array (dtype=float)
+        Coordinates of N points stored in a array of shape (2,N) seen from camR camera
+
+    camL : Camera
+        The first "left" camera view
+
+    camR : Camera
+        The second "right" camera view
+
+    Returns
+    -------
+    pts3 : 2D numpy.array (dtype=float)
+        (3,N) array containing 3D coordinates of the points in global coordinates
+
+    """
+
+
+    pts3 = np.zeros((3,1))
+    for i in range(0,pts2L.shape[1]):
+        ql = np.matrix([[(pts2L[0][i]-camL.c[0])/camL.f],
+                        [(pts2L[1][i]-camL.c[1])/camL.f],
+                        [1]])
+        qr = np.matrix([[(pts2R[0][i]-camR.c[0])/camR.f],
+                        [(pts2R[1][i]-camR.c[1])/camR.f],
+                        [1]])
+        
+
+        assert(ql.shape==(3,1))
+        assert(qr.shape==(3,1))
+        A = np.concatenate((np.matmul(camL.R,ql), -np.matmul(camR.R,qr)), axis=1)#np.matmul(camL.R,ql) np.matmul(camR.R,qr)
+        A = np.matrix(A, dtype='float')
+        assert(A.shape==(3,2))
+        b = camR.t - camL.t
+        assert(b.shape==(3,1))
+        u,residuals,rank,s = np.linalg.lstsq(A,b)
+        u = np.array(u)
+        assert(u.shape==(2,1))
+        PL = u[0]*np.array(ql)
+        PR = u[1]*np.array(qr)
+        P1 = np.matmul(camL.R,PL) + camL.t
+        P2 = np.matmul(camR.R,PR) + camR.t
+        P = np.array((P1+P2)/2)
+        assert(P.shape==(3,1))
+        pts3 = np.concatenate((pts3, P), axis=1)
+    pts3 = pts3[:,1:]
+    print(pts3.shape)
+    assert(pts3.shape==(3,pts2L.shape[1]))
+    return pts3
